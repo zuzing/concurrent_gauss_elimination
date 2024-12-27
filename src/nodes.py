@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 class Node:
-	def __init__(self, system: "LinearSystem"):
+	def __init__(self, system: LinearSystem):
 		self.system = system
 		self.children = []
 		self.parents = []
@@ -31,15 +31,18 @@ class Node:
 	def __str__(self):
 		pass
 
+	def __repr__(self):
+		return str(self)
+
 
 class A(Node):
-	def __init__(self, system: "LinearSystem", k: int, i: int):
+	def __init__(self, system: LinearSystem, k: int, i: int):
 		super().__init__(system)
 		self.k = k
 		self.i = i
 
 	def find_children(self):
-		for j in range(self.i, self.system.N):
+		for j in range(self.i, self.system.N+1):
 			self.add_child(B(self.system, self.k, j, self.i))
 
 	def __call__(self):
@@ -56,7 +59,7 @@ class A(Node):
 
 
 class B(Node):
-	def __init__(self, system: "LinearSystem", k: int, j: int, i: int):
+	def __init__(self, system: LinearSystem, k: int, j: int, i: int):
 		super().__init__(system)
 		self.k = k
 		self.j = j
@@ -66,7 +69,7 @@ class B(Node):
 		self.add_child(C(self.system, self.k, self.j, self.i))
 
 	def __call__(self):
-		self.system.n[self.k, self.j, self.i] = self.system.M[self.i, self.j] * self.system.m[self.i, self.j]
+		self.system.n[self.k, self.j, self.i] = self.system.M[self.i, self.j] * self.system.m[self.k, self.i]
 
 	def __hash__(self):
 		return hash((self.k, self.j, self.i))
@@ -79,22 +82,23 @@ class B(Node):
 
 
 class C(Node):
-	def __init__(self, system: "LinearSystem", k: int, j: int, i: int):
+	def __init__(self, system: LinearSystem, k: int, j: int, i: int):
 		super().__init__(system)
 		self.k = k
 		self.j = j
 		self.i = i
 
 	def find_children(self):
-		if self.i < self.system.N-2 and self.j != self.i+1:
+		if self.k > self.i+1 and self.j > self.i+1:
 			self.add_child(C(self.system, self.k, self.j, self.i+1))
 		if self.k == self.i+1 and self.j != self.i+1:
-			for r in range(self.i+2, self.system.N-1):
-				self.add_child(B(self.system, r, self.j, self.i+1))
+			for r in range(self.i+2, self.system.N):
+				if self.i < self.j:
+					self.add_child(B(self.system, r, self.j, self.i+1))
 		if self.j == self.i+1 and self.k > self.i+1:
 			self.add_child(A(self.system, self.k, self.i+1))
 		if self.k == self.i+1 and self.j == self.i+1:
-			for r in range(self.i+2, self.system.N-1):
+			for r in range(self.i+2, self.system.N):
 				self.add_child(A(self.system, r, self.i+1))
 
 	def __call__(self):
